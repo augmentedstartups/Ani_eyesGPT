@@ -16,8 +16,7 @@ from enum import Enum
 # Define constants
 DEFAULT = 0
 TIRED = 1
-ANGRY = 2
-HAPPY = 3
+EXCITED = 2
 
 # Direction constants
 N = 1  # north, top center
@@ -119,6 +118,26 @@ class RoboEyes:
         self.is_confused = False
         self.confused_start_time = 0
         self.confused_duration = 1.0  # seconds
+        
+        # Eye shape variations
+        self.eye_shape = "round"  # Can be "round", "square", "oval", "teardrop", "pill"
+        
+        # Manual eye control with arrow keys
+        self.manual_control = False
+        self.manual_x_offset = 0
+        self.manual_y_offset = 0
+        self.manual_x_velocity = 0
+        self.manual_y_velocity = 0
+        self.manual_velocity_max = 5  # Maximum velocity for arrow key movement
+        self.manual_velocity_accel = 0.5  # Acceleration factor
+        self.manual_velocity_decel = 0.9  # Deceleration factor (friction)
+        self.manual_offset_max = 50  # Maximum pixel offset for manual control
+        
+        # Initialize eyelid properties
+        self.eyelids_closed_height = 0
+        self.eyelids_closed_height_next = 0
+        self.eyelids_tired_height = 0
+        self.eyelids_tired_height_next = 0
 
     def begin(self, screen_width, screen_height, max_fps=60):
         """Initialize the RoboEyes with screen dimensions and frame rate"""
@@ -140,24 +159,17 @@ class RoboEyes:
 
     def _calculate_eye_positions(self):
         """Calculate the eye positions based on screen size and eye properties"""
-        if self.cyclops:
-            # Center the single eye
-            self.eye_l_x = (self.screen_width - self.eye_l_width) // 2
-            self.eye_l_y = (self.screen_height - self.eye_l_height) // 2
-            self.eye_l_x_next = self.eye_l_x
-            self.eye_l_y_next = self.eye_l_y
-        else:
-            # Calculate positions for both eyes
-            total_width = self.eye_l_width + self.eye_r_width + self.space_between
-            self.eye_l_x = (self.screen_width - total_width) // 2
-            self.eye_l_y = (self.screen_height - self.eye_l_height) // 2
-            self.eye_r_x = self.eye_l_x + self.eye_l_width + self.space_between
-            self.eye_r_y = (self.screen_height - self.eye_r_height) // 2
-            
-            self.eye_l_x_next = self.eye_l_x
-            self.eye_l_y_next = self.eye_l_y
-            self.eye_r_x_next = self.eye_r_x
-            self.eye_r_y_next = self.eye_r_y
+        # Calculate positions for both eyes (cyclops mode disabled)
+        total_width = self.eye_l_width + self.eye_r_width + self.space_between
+        self.eye_l_x = (self.screen_width - total_width) // 2
+        self.eye_l_y = (self.screen_height - self.eye_l_height) // 2
+        self.eye_r_x = self.eye_l_x + self.eye_l_width + self.space_between
+        self.eye_r_y = (self.screen_height - self.eye_r_height) // 2
+        
+        self.eye_l_x_next = self.eye_l_x
+        self.eye_l_y_next = self.eye_l_y
+        self.eye_r_x_next = self.eye_r_x
+        self.eye_r_y_next = self.eye_r_y
 
     def update(self):
         """Update eyes drawings with frame rate limitation"""
@@ -170,6 +182,44 @@ class RoboEyes:
                 self.running = False
                 pygame.quit()
                 return False
+        
+        # Handle arrow key input for manual eye control with velocity
+        if self.manual_control:
+            keys = pygame.key.get_pressed()
+            
+            # Apply acceleration based on arrow keys
+            if keys[pygame.K_UP]:
+                self.manual_y_velocity -= self.manual_velocity_accel
+            if keys[pygame.K_DOWN]:
+                self.manual_y_velocity += self.manual_velocity_accel
+            if keys[pygame.K_LEFT]:
+                self.manual_x_velocity -= self.manual_velocity_accel
+            if keys[pygame.K_RIGHT]:
+                self.manual_x_velocity += self.manual_velocity_accel
+                
+            # Apply velocity limits
+            self.manual_x_velocity = max(-self.manual_velocity_max, min(self.manual_velocity_max, self.manual_x_velocity))
+            self.manual_y_velocity = max(-self.manual_velocity_max, min(self.manual_velocity_max, self.manual_y_velocity))
+            
+            # Apply deceleration (friction) when no keys are pressed
+            if not (keys[pygame.K_LEFT] or keys[pygame.K_RIGHT]):
+                self.manual_x_velocity *= self.manual_velocity_decel
+            if not (keys[pygame.K_UP] or keys[pygame.K_DOWN]):
+                self.manual_y_velocity *= self.manual_velocity_decel
+                
+            # Apply velocity to position
+            self.manual_x_offset += self.manual_x_velocity
+            self.manual_y_offset += self.manual_y_velocity
+            
+            # Apply position limits
+            self.manual_x_offset = max(-self.manual_offset_max, min(self.manual_offset_max, self.manual_x_offset))
+            self.manual_y_offset = max(-self.manual_offset_max, min(self.manual_offset_max, self.manual_y_offset))
+            
+            # Stop completely if velocity is very small
+            if abs(self.manual_x_velocity) < 0.1:
+                self.manual_x_velocity = 0
+            if abs(self.manual_y_velocity) < 0.1:
+                self.manual_y_velocity = 0
         
         # Clear the screen
         self.screen.fill(BLACK)
@@ -272,40 +322,172 @@ class RoboEyes:
         eye_r_x_current = (self.eye_r_x + self.eye_r_x_next) / 2
         eye_r_y_current = (self.eye_r_y + self.eye_r_y_next) / 2
         
+        # Apply manual control offsets if enabled
+        if self.manual_control:
+            eye_l_x_current += self.manual_x_offset
+            eye_l_y_current += self.manual_y_offset
+            eye_r_x_current += self.manual_x_offset
+            eye_r_y_current += self.manual_y_offset
+        
         # Smooth transitions for eyelids
         eyelids_closed_height = (self.eyelids_closed_height + self.eyelids_closed_height_next) / 2
         eyelids_tired_height = (self.eyelids_tired_height + self.eyelids_tired_height_next) / 2
-        eyelids_angry_height = (self.eyelids_angry_height + self.eyelids_angry_height_next) / 2
-        eyelids_happy_bottom_offset = (self.eyelids_happy_bottom_offset + self.eyelids_happy_bottom_offset_next) / 2
         
-        # Draw the left eye (or single eye in cyclops mode)
-        pygame.draw.rect(
-            self.screen,
-            CYAN,
-            (
-                eye_l_x_current,
-                eye_l_y_current,
-                self.eye_l_width_current,
-                self.eye_l_height_current
-            ),
-            0,
-            int(self.eye_l_border_radius_current)
-        )
-        
-        # Draw the right eye (if not in cyclops mode)
-        if not self.cyclops:
+        # Draw eyes based on selected shape
+        if self.eye_shape == "round":
+            # Draw circular eyes
+            pygame.draw.ellipse(
+                self.screen,
+                CYAN,
+                (
+                    eye_l_x_current,
+                    eye_l_y_current,
+                    self.eye_l_width_current,
+                    self.eye_l_height_current
+                )
+            )
+            
+            if not self.cyclops:
+                pygame.draw.ellipse(
+                    self.screen,
+                    CYAN,
+                    (
+                        eye_r_x_current,
+                        eye_r_y_current,
+                        self.eye_r_width_current,
+                        self.eye_r_height_current
+                    )
+                )
+        elif self.eye_shape == "square":
+            # Draw square eyes with rounded corners
             pygame.draw.rect(
                 self.screen,
                 CYAN,
                 (
-                    eye_r_x_current,
-                    eye_r_y_current,
-                    self.eye_r_width_current,
-                    self.eye_r_height_current
+                    eye_l_x_current,
+                    eye_l_y_current,
+                    self.eye_l_width_current,
+                    self.eye_l_height_current
                 ),
                 0,
-                int(self.eye_r_border_radius_current)
+                int(self.eye_l_border_radius_current)
             )
+            
+            if not self.cyclops:
+                pygame.draw.rect(
+                    self.screen,
+                    CYAN,
+                    (
+                        eye_r_x_current,
+                        eye_r_y_current,
+                        self.eye_r_width_current,
+                        self.eye_r_height_current
+                    ),
+                    0,
+                    int(self.eye_r_border_radius_current)
+                )
+        elif self.eye_shape == "oval":
+            # Draw oval eyes (wider than tall)
+            pygame.draw.ellipse(
+                self.screen,
+                CYAN,
+                (
+                    eye_l_x_current,
+                    eye_l_y_current + self.eye_l_height_current * 0.25,
+                    self.eye_l_width_current,
+                    self.eye_l_height_current * 0.5
+                )
+            )
+            
+            if not self.cyclops:
+                pygame.draw.ellipse(
+                    self.screen,
+                    CYAN,
+                    (
+                        eye_r_x_current,
+                        eye_r_y_current + self.eye_r_height_current * 0.25,
+                        self.eye_r_width_current,
+                        self.eye_r_height_current * 0.5
+                    )
+                )
+        elif self.eye_shape == "teardrop":
+            # Draw teardrop shaped eyes
+            # Left eye (or single eye in cyclops mode)
+            points_left = [
+                (eye_l_x_current + self.eye_l_width_current * 0.5, eye_l_y_current),
+                (eye_l_x_current + self.eye_l_width_current, eye_l_y_current + self.eye_l_height_current * 0.5),
+                (eye_l_x_current + self.eye_l_width_current * 0.5, eye_l_y_current + self.eye_l_height_current),
+                (eye_l_x_current, eye_l_y_current + self.eye_l_height_current * 0.5)
+            ]
+            pygame.draw.polygon(self.screen, CYAN, points_left)
+            
+            # Right eye (if not in cyclops mode)
+            if not self.cyclops:
+                points_right = [
+                    (eye_r_x_current + self.eye_r_width_current * 0.5, eye_r_y_current),
+                    (eye_r_x_current + self.eye_r_width_current, eye_r_y_current + self.eye_r_height_current * 0.5),
+                    (eye_r_x_current + self.eye_r_width_current * 0.5, eye_r_y_current + self.eye_r_height_current),
+                    (eye_r_x_current, eye_r_y_current + self.eye_r_height_current * 0.5)
+                ]
+                pygame.draw.polygon(self.screen, CYAN, points_right)
+        elif self.eye_shape == "pill":
+            # Draw pill shaped eyes (like the ones in the image)
+            # Left eye (or single eye in cyclops mode)
+            pygame.draw.rect(
+                self.screen,
+                CYAN,
+                (
+                    eye_l_x_current,
+                    eye_l_y_current,
+                    self.eye_l_width_current,
+                    self.eye_l_height_current
+                ),
+                0,
+                int(self.eye_l_height_current / 2)  # Radius is half the height for pill shape
+            )
+            
+            # Right eye (if not in cyclops mode)
+            if not self.cyclops:
+                pygame.draw.rect(
+                    self.screen,
+                    CYAN,
+                    (
+                        eye_r_x_current,
+                        eye_r_y_current,
+                        self.eye_r_width_current,
+                        self.eye_r_height_current
+                    ),
+                    0,
+                    int(self.eye_r_height_current / 2)  # Radius is half the height for pill shape
+                )
+        else:
+            # Default to rectangular eyes with rounded corners
+            pygame.draw.rect(
+                self.screen,
+                CYAN,
+                (
+                    eye_l_x_current,
+                    eye_l_y_current,
+                    self.eye_l_width_current,
+                    self.eye_l_height_current
+                ),
+                0,
+                int(self.eye_l_border_radius_current)
+            )
+            
+            if not self.cyclops:
+                pygame.draw.rect(
+                    self.screen,
+                    CYAN,
+                    (
+                        eye_r_x_current,
+                        eye_r_y_current,
+                        self.eye_r_width_current,
+                        self.eye_r_height_current
+                    ),
+                    0,
+                    int(self.eye_r_border_radius_current)
+                )
         
         # Draw closed eyelids if needed
         if eyelids_closed_height > 0:
@@ -386,54 +568,6 @@ class RoboEyes:
                     ),
                     0
                 )
-        
-        # Draw angry eyelids if in ANGRY mood
-        if self.mood == ANGRY and eyelids_angry_height > 0:
-            # Left eye (or single eye in cyclops mode)
-            points_left = [
-                (eye_l_x_current, eye_l_y_current),
-                (eye_l_x_current + self.eye_l_width_current, eye_l_y_current),
-                (eye_l_x_current + self.eye_l_width_current, eye_l_y_current + eyelids_angry_height)
-            ]
-            pygame.draw.polygon(self.screen, BLACK, points_left)
-            
-            # Right eye (if not in cyclops mode)
-            if not self.cyclops:
-                points_right = [
-                    (eye_r_x_current, eye_r_y_current),
-                    (eye_r_x_current + self.eye_r_width_current, eye_r_y_current),
-                    (eye_r_x_current, eye_r_y_current + eyelids_angry_height)
-                ]
-                pygame.draw.polygon(self.screen, BLACK, points_right)
-        
-        # Draw happy eyelids if in HAPPY mood
-        if self.mood == HAPPY and eyelids_happy_bottom_offset > 0:
-            # Left eye (or single eye in cyclops mode)
-            pygame.draw.rect(
-                self.screen,
-                BLACK,
-                (
-                    eye_l_x_current,
-                    eye_l_y_current + self.eye_l_height_current - eyelids_happy_bottom_offset,
-                    self.eye_l_width_current,
-                    eyelids_happy_bottom_offset
-                ),
-                0
-            )
-            
-            # Right eye (if not in cyclops mode)
-            if not self.cyclops:
-                pygame.draw.rect(
-                    self.screen,
-                    BLACK,
-                    (
-                        eye_r_x_current,
-                        eye_r_y_current + self.eye_r_height_current - eyelids_happy_bottom_offset,
-                        self.eye_r_width_current,
-                        eyelids_happy_bottom_offset
-                    ),
-                    0
-                )
 
     # Eye shape configuration methods
     def set_width(self, left_eye, right_eye):
@@ -463,8 +597,9 @@ class RoboEyes:
         return True
 
     def set_cyclops(self, state):
-        """Set cyclops mode (single eye)"""
-        self.cyclops = state
+        """Set cyclops mode (single eye) - DISABLED"""
+        # Always set to False to disable cyclops mode
+        self.cyclops = False
         self._calculate_eye_positions()
         return True
 
@@ -475,16 +610,21 @@ class RoboEyes:
         
         # Reset all mood-related properties
         self.eyelids_tired_height_next = 0
-        self.eyelids_angry_height_next = 0
-        self.eyelids_happy_bottom_offset_next = 0
         
-        # Set the appropriate mood properties
+        # Set the appropriate mood properties and eye shapes
         if mood == TIRED:
             self.eyelids_tired_height_next = int(self.eye_l_height * 0.3)
-        elif mood == ANGRY:
-            self.eyelids_angry_height_next = int(self.eye_l_height * 0.3)
-        elif mood == HAPPY:
-            self.eyelids_happy_bottom_offset_next = int(self.eye_l_height * 0.3)
+            self.set_eye_shape("square")
+        elif mood == EXCITED:
+            self.set_eye_shape("pill")
+            # Make eyes wider for excited look
+            self.set_width(int(self.eye_l_width_default * 1.3), int(self.eye_r_width_default * 1.3))
+            self.set_height(int(self.eye_l_height_default * 0.8), int(self.eye_r_height_default * 0.8))
+        else:  # DEFAULT
+            # Reset to default eye shape and size
+            self.set_eye_shape("square")
+            self.set_width(self.eye_l_width_default, self.eye_r_width_default)
+            self.set_height(self.eye_l_height_default, self.eye_r_height_default)
         
         return True
 
@@ -632,6 +772,31 @@ class RoboEyes:
         self.idle_mode_interval = interval
         self.idle_mode_variation = variation
         self.idle_mode_last_time = time.time()
+        return True
+        
+    def set_eye_shape(self, shape):
+        """Set the eye shape"""
+        if shape in ["round", "square", "oval", "teardrop", "pill"]:
+            self.eye_shape = shape
+            return True
+        return False
+        
+    def set_manual_control(self, state):
+        """Enable/disable manual control with arrow keys"""
+        self.manual_control = state
+        # Reset offsets and velocities when disabling manual control
+        if not state:
+            self.manual_x_offset = 0
+            self.manual_y_offset = 0
+            self.manual_x_velocity = 0
+            self.manual_y_velocity = 0
+        return True
+        
+    def anim_excited(self):
+        """Excited animation - rapidly changing eye size"""
+        self.set_mood(EXCITED)
+        self.set_h_flicker(True, 3)
+        self.set_v_flicker(True, 3)
         return True
 
     def is_running(self):

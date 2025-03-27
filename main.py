@@ -6,7 +6,7 @@ Demonstrates the RoboEyes Python implementation
 import pygame
 import sys
 import time
-from robo_eyes import RoboEyes, DEFAULT, TIRED, ANGRY, HAPPY, N, NE, E, SE, S, SW, W, NW
+from robo_eyes import RoboEyes, DEFAULT, TIRED, EXCITED, N, NE, E, SE, S, SW, W, NW
 
 def main():
     # Create RoboEyes instance
@@ -27,6 +27,12 @@ def main():
     eyes.set_border_radius(20, 20)
     eyes.set_space_between(40)
     
+    # Store default values for reset
+    eyes.eye_l_width_default = 80
+    eyes.eye_r_width_default = 80
+    eyes.eye_l_height_default = 80
+    eyes.eye_r_height_default = 80
+    
     # Enable auto blinker and idle mode
     eyes.set_auto_blinker(True, 3, 2)
     eyes.set_idle_mode(True, 4, 2)
@@ -34,27 +40,32 @@ def main():
     # Set curiosity effect
     eyes.set_curiosity(True)
     
+    # Set initial eye shape
+    eyes.set_eye_shape("pill")
+    
     # Main loop
     try:
         current_mood = DEFAULT
-        moods = [DEFAULT, TIRED, ANGRY, HAPPY]
-        mood_names = ["DEFAULT", "TIRED", "ANGRY", "HAPPY"]
+        moods = [DEFAULT, TIRED, EXCITED]
+        mood_names = ["DEFAULT", "TIRED", "EXCITED"]
         mood_change_time = time.time()
         mood_duration = 5  # seconds
         
-        cyclops_mode = False
-        cyclops_change_time = time.time()
-        cyclops_duration = 15  # seconds
+        # Manual control flag
+        manual_control = False
         
         # Display instructions
         print("RoboEyes Python Demo")
         print("--------------------")
         print("Press ESC or close the window to exit")
-        print("Press 1-4 to change mood")
-        print("Press C to toggle cyclops mode")
+        print("Press 1-3 to change mood:")
+        print("  1: DEFAULT, 2: TIRED, 3: EXCITED")
         print("Press B to blink")
         print("Press L to laugh")
         print("Press F to look confused")
+        print("Press E to look excited")
+        print("Press M to toggle manual control with arrow keys")
+        print("Use ARROW KEYS to move eyes when in manual control mode")
         print("Press SPACE to reset to default")
         
         while eyes.is_running():
@@ -75,15 +86,8 @@ def main():
                         eyes.set_mood(TIRED)
                         print("Mood: TIRED")
                     elif event.key == pygame.K_3:
-                        eyes.set_mood(ANGRY)
-                        print("Mood: ANGRY")
-                    elif event.key == pygame.K_4:
-                        eyes.set_mood(HAPPY)
-                        print("Mood: HAPPY")
-                    elif event.key == pygame.K_c:
-                        cyclops_mode = not cyclops_mode
-                        eyes.set_cyclops(cyclops_mode)
-                        print(f"Cyclops mode: {'ON' if cyclops_mode else 'OFF'}")
+                        eyes.set_mood(EXCITED)
+                        print("Mood: EXCITED")
                     elif event.key == pygame.K_b:
                         eyes.blink()
                         print("Blinking")
@@ -93,22 +97,31 @@ def main():
                     elif event.key == pygame.K_f:
                         eyes.anim_confused()
                         print("Confused")
+                    elif event.key == pygame.K_e:
+                        eyes.anim_excited()
+                        print("Excited")
+                    elif event.key == pygame.K_m:
+                        manual_control = not manual_control
+                        eyes.set_manual_control(manual_control)
+                        print(f"Manual control with arrow keys: {'ON' if manual_control else 'OFF'}")
                     elif event.key == pygame.K_SPACE:
                         # Reset to default
                         eyes.set_mood(DEFAULT)
-                        eyes.set_cyclops(False)
                         eyes.set_position(DEFAULT)
                         eyes.set_h_flicker(False)
                         eyes.set_v_flicker(False)
+                        eyes.set_manual_control(False)
+                        manual_control = False
                         print("Reset to default")
             
-            # Auto change mood for demo purposes
-            current_time = time.time()
-            if current_time - mood_change_time > mood_duration:
-                current_mood = (current_mood + 1) % len(moods)
-                eyes.set_mood(moods[current_mood])
-                print(f"Auto changing mood to: {mood_names[current_mood]}")
-                mood_change_time = current_time
+            # Auto change mood for demo purposes (only if not in manual control)
+            if not manual_control:
+                current_time = time.time()
+                if current_time - mood_change_time > mood_duration:
+                    current_mood = (current_mood + 1) % len(moods)
+                    eyes.set_mood(moods[current_mood])
+                    print(f"Auto changing mood to: {mood_names[current_mood]}")
+                    mood_change_time = current_time
             
             # Update the eyes
             eyes.update()
