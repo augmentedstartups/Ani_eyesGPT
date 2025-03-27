@@ -13,9 +13,9 @@ import time
 import math
 
 # Import utility modules
-from animations_utils import AnimationsHandler
-from moods_utils import MoodsHandler, DEFAULT, TIRED, SAD, EXCITED
-from shapes_utils import ShapesHandler, N, NE, E, SE, S, SW, W, NW
+from utils.animations_utils import AnimationsHandler
+from utils.moods_utils import MoodsHandler, DEFAULT, TIRED, SAD, EXCITED
+from utils.shapes_utils import ShapesHandler, N, NE, E, SE, S, SW, W, NW
 
 # Colors
 BLACK = (0, 0, 0)

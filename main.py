@@ -7,8 +7,8 @@ import pygame
 import sys
 import time
 from robo_eyes import RoboEyes
-from moods_utils import DEFAULT, TIRED, SAD, EXCITED
-from shapes_utils import N, NE, E, SE, S, SW, W, NW
+from utils.moods_utils import DEFAULT, TIRED, SAD, EXCITED
+from utils.shapes_utils import N, NE, E, SE, S, SW, W, NW
 
 def main():
     # Create RoboEyes instance

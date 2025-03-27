@@ -34,8 +34,8 @@ class MoodsHandler:
             self.eyelids_tired_height_next = int(self.parent.eye_l_height * 0.3)
             self.parent.shapes.set_eye_shape("square")
         elif mood == SAD:
-            # Teardrop shape for SAD mood as shown in the image
-            self.parent.shapes.set_eye_shape("teardrop")
+            # Angry shape for SAD mood as shown in the image
+            self.parent.shapes.set_eye_shape("angry")
             # Make eyes slightly narrower
             self.parent.shapes.set_width(
                 int(self.parent.eye_l_width_default * 0.9), 
@@ -79,8 +79,18 @@ class MoodsHandler:
     def draw_mood_elements(self, screen, eye_l_x_current, eye_l_y_current, eye_r_x_current, eye_r_y_current, 
                           eye_l_width_current, eye_l_height_current, eye_r_width_current, eye_r_height_current):
         """Draw mood-specific elements"""
+        # Convert all position and size values to integers to avoid float errors
+        eye_l_x = int(eye_l_x_current)
+        eye_l_y = int(eye_l_y_current)
+        eye_r_x = int(eye_r_x_current)
+        eye_r_y = int(eye_r_y_current)
+        eye_l_width = int(eye_l_width_current)
+        eye_l_height = int(eye_l_height_current)
+        eye_r_width = int(eye_r_width_current)
+        eye_r_height = int(eye_r_height_current)
+        
         # Smooth transitions for eyelids
-        eyelids_tired_height = (self.eyelids_tired_height + self.eyelids_tired_height_next) / 2
+        eyelids_tired_height = int((self.eyelids_tired_height + self.eyelids_tired_height_next) / 2)
         
         # Draw tired eyelids if in TIRED mood
         if self.current_mood == TIRED and eyelids_tired_height > 0:
@@ -89,9 +99,9 @@ class MoodsHandler:
                 screen,
                 (0, 0, 0),  # BLACK
                 (
-                    eye_l_x_current,
-                    eye_l_y_current,
-                    eye_l_width_current,
+                    eye_l_x,
+                    eye_l_y,
+                    eye_l_width,
                     eyelids_tired_height
                 ),
                 0
@@ -102,9 +112,9 @@ class MoodsHandler:
                 screen,
                 (0, 0, 0),  # BLACK
                 (
-                    eye_r_x_current,
-                    eye_r_y_current,
-                    eye_r_width_current,
+                    eye_r_x,
+                    eye_r_y,
+                    eye_r_width,
                     eyelids_tired_height
                 ),
                 0
