@@ -2,6 +2,10 @@
 
 A Python project that aims to mimic the expressive eyes from Pixar characters and Cosmo robots. We're creating animated, expressive eyes that can convey emotion and personality using Pygame. We plan to add a Large Language Model (LLM) to drive the expressions based on context and interaction.
 
+## Demo
+
+![Ani-eyes GPT Demo](utils/eyes.gif)
+
 ## Features
 
 - Customizable eye shapes (width, height, border radius, spacing)
